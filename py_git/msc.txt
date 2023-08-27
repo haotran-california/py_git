@@ -1,0 +1,125 @@
+def getFileMetaData(file_path): 
+    file_path_array = file_path.split("/")
+    filename = file_path_array[-1]
+    current_dir_path = "/".join(file_path_array[:-1]) 
+    n = len(file_path_array)
+    return (filename, current_dir_path, n)
+
+def hashContent(sha1, content):
+    git_object_dir = ".git/objects/"
+    file_path = git_object_dir + sha1[0:2] + "/" + sha1[2:] 
+    with open(file_path, "wb") as file: 
+        file.write(content.encode("utf-8"))
+
+def write_tree_helper(cache_array, maxIndex, prev_dir_path, rWrites): 
+    index = 0
+    treeString = ""
+
+    while(index < maxIndex): 
+        entry = cache_array[index]
+        file_path = entry.file_path
+        filename, current_dir_path, n = getFileMetaData(file_path)
+        
+        #set tree object metadata to blob
+        object_type = "blob"
+        result_sha1 = entry.sha1
+        location = filename
+        subdir_written = 0
+
+        rWrites -= 1 
+
+        if rWrites == -1: 
+            break
+
+        if n > 1 and current_dir_path != prev_dir_path: 
+            #find the number of 'similar' directories in cache
+            setWrites = 1
+            startIndex = index + 1 
+            cacheLength = len(cache_array)
+            while(startIndex < cacheLength):
+                entry = cache_array[startIndex]
+                file_path = entry.file_path
+                __, next_dir_path, __ = getFileMetaData(file_path)
+
+                if current_dir_path == next_dir_path: 
+                    startIndex += 1 
+                    setWrites += 1 
+                else: 
+                    break
+
+            subdir_written, result_sha1 = write_tree_helper(cache_array[index:], maxIndex, current_dir_path, setWrites)
+            location = current_dir_path.split("/")[-1] #modify this so it takes the "current" directory level 
+            line = f"tree {result_sha1} {location}"
+            treeString += line
+    
+
+        line = f"{object_type} {entry.sha1} {filename} "
+        treeString += line
+        index += max(1, subdir_written) 
+
+    if index == maxIndex: 
+        print(treeString)
+    with tempfile.NamedTemporaryFile(mode="w+t", dir=".", delete=True) as temp: 
+        temp.write(treeString)
+        temp.flush()
+        temp_file_path = os.path.join('.', temp.name)
+        hash_status, hex_sha1 = hash_file(temp_file_path, "tree")
+
+    return (index + 1, hex_sha1)
+
+    #how do we even write the info we get? 
+    # <type> <sha1> <file-name> 
+    # filename not filepath is written
+    
+    #Sup. we just had the current level
+    # then we just dynamically allocate a string to the size 
+    # of the subtree "string" the string representation which holds all 
+    # the directories and file of the particular level
+    # BUT we likely have more compression to do here
+
+    #How does index += subdir_written work? 
+    #Sup. we had 2 files and folder "dir" with another 3 files 
+    # numEntries in cache is 5
+    # top level tree has 3 entries 
+    # second level tree has 2 entries 
+
+    # index needs to reach 5 in order to break 
+
+def parseByteFormat(input_str): 
+    data  = input_str.decode("utf-8")
+    # space_index = data.find(' ')
+    # null_byte_index = data.find('\x00')
+    # object_type = data[:space_index]
+    # size = int(data[space_index + 1: null_byte_index])
+    # contents = data[null_byte_index + 1: ]
+    parseArray = data.split(" ")
+    object_type, size, contents = parseArray[0], parseArray[1], parseArray[2:]
+
+
+def display_content(input_object):
+    if input_object[0] == 'tree':
+        tree = input_object[2]
+        n = len(tree)
+        for i in range(0, n, 3):
+            file_type = tree[i]
+            hash_code = tree[i + 1]
+            file_name = tree[i + 2]
+            print(f"{file_type} {hash_code}\t{file_name}")
+    elif input_object[0] == "commit": 
+        print(input_object[2])
+        output = ""
+        for raw_line in input_object[2]: 
+            line = raw_line.split(":")
+            for i, word in enumerate(line): 
+                if i != 0: 
+                    output += " "
+                output += word
+            output += '\n'
+        print(output)
+    else: 
+        output = ""
+        for i, word in enumerate(input_object[2]): 
+            if i != 0: 
+                output += " "
+            output += word
+        print(output)
