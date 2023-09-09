@@ -2,11 +2,10 @@ import os
 import typer 
 import py_git.git as git
 import py_git.models as models
+import py_git.utils as utils
 from typing_extensions import Annotated
 from typing import List
 from py_git import SUCCESS, ERRORS, INIT_ERROR, F_EXIST_ERROR, F_LARGE_ERROR, HASH_EXISTS_ERROR
-
-
 
 app = typer.Typer()
 #perhaps add a constant which is true or false if git has been init or not #perhaps add a constant which is true or false if git has been init or not #perhaps add a constant which is true or false if git has been init or not 
@@ -79,29 +78,13 @@ def update_cache(
 ) -> None: 
     """Adds object to the stagging area as well as hashes the object"""
     if file_paths[0] == ".": 
-        abs_file_paths = get_all_files()
+        abs_file_paths = utils.get_all_files()
         cwd = os.getcwd()
         relative_paths = [os.path.relpath(file_path, cwd) for file_path in abs_file_paths]
         file_paths = relative_paths
 
     for file in file_paths: 
         git.update_cache(file.lstrip("./"))
-
-def get_all_files():
-    files = []
-    for root, dirs, filenames in os.walk(os.getcwd()):
-        # Remove directories that start with a dot or are named 'py_git'
-        dirs[:] = [d for d in dirs if not d.startswith('.') and d != 'py_git']
-        for filename in filenames:
-            files.append(os.path.join(root, filename))
-    return files
-
-
-# @app.command()
-# def ls_tree(
-#     tree_sha: Annotated[str, typer.Argument()]
-# ) -> None: 
-#     return  
 
 @app.command()
 def write_tree() -> None: 
@@ -161,6 +144,23 @@ def checkout(
 def status(): 
     """Shows files in stagging area and changes"""
     git.status()
+
+@app.command()
+def merge(
+    branch: Annotated[str, typer.Argument()], 
+): 
+    git.merge(branch)
+
+@app.command()
+def diff(
+    commit_sha: Annotated[List[str], typer.Argument()]
+): 
+    diff_string = git.diff(commit_sha[0], commit_sha[1])
+    print(diff_string)
+
+@app.command()
+def temp(): 
+    git.temp()
 
 def handleError(errorCode) -> None: 
     print(f"Error {ERRORS[errorCode]}")

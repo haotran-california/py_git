@@ -8,6 +8,8 @@ ERRORS = {
     F_LARGE_ERROR: "file is too large", 
     HASH_EXISTS_ERROR: "file has already been hashed"
 }
+
 GIT_DIR = "./git"
+DEV_NULL_FILE = "/dev/null"
 
 

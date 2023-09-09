@@ -123,3 +123,94 @@ def display_content(input_object):
                 output += " "
             output += word
         print(output)
+
+class FileDiffList: 
+    def __init__(self): 
+        self.array = []
+        self.block_array = []
+
+    def parse(self, rawfileContents: List[str]): 
+        #parse by newline 
+        array_contents = rawfileContents.split('\n')
+        filtered_array_contents = [x for x in array_contents if x != ""]
+
+        #parse into blocks
+        array_blocks = []
+        block = ""
+        for content in filtered_array_contents: 
+            if content.startswith("diff") and block != "": 
+                array_blocks.append(block)
+
+            if content.startswith("diff"): 
+                block = ""
+
+            block += content + '\n'
+
+        array_blocks.append(block)
+
+        #parse each block into a FileDiff object 
+        self.block_array = array_blocks
+        # for block in array_blocks: 
+        #     fileDiff = FileDiff()
+        #     fileDiff.parseBlock(block)
+        #     print(fileDiff) 
+        #     self.array.append(fileDiff)
+
+class FileDiff: 
+    def __init__(self): 
+        self.diff_line = ""
+        self.from_file = ""
+        self.to_file = ""
+        self.mod = ""
+        self.content = ""
+
+    def parseBlock(self, raw_text: str): 
+        #parsed_text = raw_text.split('\n')
+        parsed_text = raw_text.splitlines()
+        n = len(parsed_text)
+        self.diff_line = parsed_text[0]
+        self.from_file = parsed_text[1]
+        self.to_file = parsed_text[2]
+        if n >= 4: 
+            self.mod = parsed_text[3] 
+        if n >= 5: 
+            base = ""
+            #where did I use this pattern again? 
+            for text in parsed_text[4:]: 
+                base += text + '\n'
+            self.content = base
+
+    def __str__(self):
+        output = ""
+        output += self.from_file + '\n'
+        output += self.to_file + '\n'
+        output += self.mod + '\n'
+        output += self.content + '\n'
+        return output
+
+def temp(): 
+    fileA = open("diffA.txt", "r")
+    fileB = open("diffB.txt", "r")
+
+    file_A_contents = fileA.read()
+    file_B_contents = fileB.read()
+
+    #diff_list_a = file_A_contents.split("\n") 
+    #diff_list_b = file_B_contents.split("\n")
+
+    diff_list_A = FileDiffList()
+    diff_list_B = FileDiffList()
+    diff_list_A.parse(file_A_contents)
+    diff_list_B.parse(file_B_contents)
+    
+    for patch in diff_list_A.block_array: 
+        apply_patch_via_subprocess(patch)
+
+    #diff_item = diff_list_A.array[0]
+    #diffItem(diff_item)
+
+    #use diff list to apply patch
+
+    fileA.close()
+    fileB.close()
+

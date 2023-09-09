@@ -64,8 +64,7 @@ class CacheHandeler:
         for i, entry in enumerate(cache.contents): 
             if file_path == entry.file_path: 
                 cache.contents[i] = cache_entry
-                print("old", cache.contents[i])
-                print("new", cache_entry)
+                self.save_cache(cache)
                 return
                 
         #implement binary search here later
